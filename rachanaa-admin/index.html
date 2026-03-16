@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rachanaa Fintech — Admin Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    :root {
+      --purple: #6A0DAD; --purple2: #8B2FCC; --gold: #C8940A;
+      --green: #1A6B3C; --blue: #4A90D9; --red: #DC2626;
+      --bg: #F4F6FB; --card: #ffffff;
+      --border: rgba(106,13,173,0.1);
+      --text: #0F051E; --muted: rgba(15,5,30,0.5);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
+
+    /* ── LOGIN ── */
+    #login-screen {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #0A0515 0%, #1a0535 100%);
+    }
+    .login-card {
+      background: white; border-radius: 20px; padding: 48px 40px;
+      width: 100%; max-width: 420px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.4);
+    }
+    .login-logo { font-size: 28px; font-weight: 800; color: var(--purple); margin-bottom: 4px; }
+    .login-logo span { color: var(--gold); }
+    .login-sub { font-size: 11px; letter-spacing: 3px; color: var(--muted); margin-bottom: 36px; text-transform: uppercase; }
+    .login-card h2 { font-size: 22px; font-weight: 700; margin-bottom: 24px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-group input {
+      width: 100%; padding: 12px 14px; border: 1.5px solid rgba(106,13,173,0.15);
+      border-radius: 10px; font-size: 15px; outline: none; background: #fafafa; font-family: inherit;
+      transition: border 0.2s;
+    }
+    .form-group input:focus { border-color: var(--purple); }
+    .login-btn {
+      width: 100%; padding: 13px; background: var(--purple); color: white;
+      border: none; border-radius: 10px; font-size: 15px; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: all 0.2s; margin-top: 8px;
+    }
+    .login-btn:hover { background: var(--purple2); transform: translateY(-1px); }
+    .login-error { background: rgba(220,38,38,0.08); border: 1px solid rgba(220,38,38,0.2); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--red); margin-bottom: 12px; }
+
+    /* ── LAYOUT ── */
+    #app { display: none; }
+    .layout { display: flex; min-height: 100vh; }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 240px; background: #0A0515; color: white;
+      display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0;
+      z-index: 100; transition: transform 0.3s;
+    }
+    .sidebar-logo { padding: 24px 20px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .sidebar-logo .name { font-size: 20px; font-weight: 800; }
+    .sidebar-logo .name span { color: var(--gold); }
+    .sidebar-logo .sub { font-size: 9px; letter-spacing: 3px; color: rgba(255,255,255,0.3); margin-top: 2px; }
+    .sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+    .nav-section { font-size: 10px; letter-spacing: 2px; color: rgba(255,255,255,0.3); margin: 16px 8px 6px; text-transform: uppercase; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      border-radius: 8px; cursor: pointer; font-size: 13.5px; font-weight: 500;
+      color: rgba(255,255,255,0.6); transition: all 0.2s; margin-bottom: 2px;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.07); color: white; }
+    .nav-item.active { background: rgba(106,13,173,0.4); color: white; }
+    .nav-item .badge {
+      margin-left: auto; background: var(--gold); color: #1a0a00;
+      font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
+    }
+    .sidebar-footer { padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.06); }
+    .logout-btn {
+      display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+      color: rgba(255,255,255,0.5); cursor: pointer; font-size: 13px; border-radius: 8px;
+      transition: all 0.2s; background: none; border: none; font-family: inherit; width: 100%;
+    }
+    .logout-btn:hover { background: rgba(220,38,38,0.1); color: #fc8181; }
+
+    /* ── MAIN ── */
+    .main { margin-left: 240px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+    .topbar {
+      background: white; padding: 0 28px; height: 64px; display: flex; align-items: center;
+      justify-content: space-between; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 50;
+      box-shadow: 0 1px 12px rgba(106,13,173,0.06);
+    }
+    .topbar-title { font-size: 17px; font-weight: 700; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .live-badge {
+      display: flex; align-items: center; gap: 6px; background: rgba(26,153,80,0.08);
+      border: 1px solid rgba(26,153,80,0.2); border-radius: 20px; padding: 5px 12px;
+      font-size: 12px; font-weight: 600; color: #1A6B3C;
+    }
+    .live-dot { width: 7px; height: 7px; background: #1A9950; border-radius: 50%; animation: blink 1.8s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+    .content { padding: 28px; flex: 1; }
+
+    /* ── STAT CARDS ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card {
+      background: white; border-radius: 16px; padding: 20px 24px;
+      border: 1px solid var(--border); box-shadow: 0 2px 12px rgba(106,13,173,0.05);
+      transition: all 0.3s;
+    }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(106,13,173,0.1); }
+    .stat-card .label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .stat-card .value { font-size: 32px; font-weight: 800; line-height: 1; }
+    .stat-card .change { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    /* ── CHARTS ── */
+    .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .chart-card {
+      background: white; border-radius: 16px; padding: 24px;
+      border: 1px solid var(--border); box-shadow: 0 2px 12px rgba(106,13,173,0.05);
+    }
+    .chart-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .chart-card .sub { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+    .chart-wrap { position: relative; height: 220px; }
+
+    /* ── TABLE ── */
+    .table-card {
+      background: white; border-radius: 16px;
+      border: 1px solid var(--border); box-shadow: 0 2px 12px rgba(106,13,173,0.05);
+      overflow: hidden;
+    }
+    .table-header {
+      padding: 20px 24px; display: flex; align-items: center;
+      justify-content: space-between; flex-wrap: wrap; gap: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .table-header h3 { font-size: 15px; font-weight: 700; }
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .filter-select, .filter-input {
+      padding: 8px 12px; border: 1.5px solid rgba(106,13,173,0.15);
+      border-radius: 8px; font-size: 13px; outline: none; background: #fafafa;
+      font-family: inherit; transition: border 0.2s;
+    }
+    .filter-select:focus, .filter-input:focus { border-color: var(--purple); }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+      border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+      border: none; font-family: inherit; transition: all 0.2s;
+    }
+    .btn-primary { background: var(--purple); color: white; }
+    .btn-primary:hover { background: var(--purple2); }
+    .btn-outline { background: transparent; color: var(--purple); border: 1.5px solid rgba(106,13,173,0.25); }
+    .btn-outline:hover { background: rgba(106,13,173,0.06); }
+    .btn-green { background: var(--green); color: white; }
+    .btn-green:hover { background: #155a30; }
+    .btn-red { background: var(--red); color: white; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      background: #F8F5FF; padding: 12px 16px; text-align: left;
+      font-size: 11px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;
+    }
+    th input[type="checkbox"], td input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--purple); }
+    td { padding: 12px 16px; font-size: 13px; border-bottom: 1px solid rgba(106,13,173,0.05); vertical-align: middle; }
+    tr:hover td { background: rgba(106,13,173,0.02); }
+    tr.selected td { background: rgba(106,13,173,0.04); }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+    }
+    .badge-Insurance  { background: rgba(106,13,173,0.1); color: var(--purple); }
+    .badge-Motor      { background: rgba(74,144,217,0.12); color: var(--blue); }
+    .badge-Loan       { background: rgba(26,107,60,0.1); color: var(--green); }
+    .badge-Investment { background: rgba(200,148,10,0.1); color: var(--gold); }
+    .badge-Career     { background: rgba(74,144,217,0.1); color: #2563eb; }
+    .badge-General    { background: rgba(100,100,100,0.1); color: #555; }
+
+    .status-select {
+      padding: 4px 8px; border: 1px solid rgba(106,13,173,0.15); border-radius: 6px;
+      font-size: 12px; background: white; font-family: inherit; cursor: pointer;
+      outline: none;
+    }
+
+    .pagination {
+      display: flex; align-items: center; gap: 8px; padding: 16px 24px;
+      justify-content: flex-end; border-top: 1px solid var(--border);
+    }
+    .page-btn {
+      width: 32px; height: 32px; border: 1.5px solid rgba(106,13,173,0.15);
+      border-radius: 6px; background: white; cursor: pointer; font-size: 13px;
+      font-family: inherit; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+    }
+    .page-btn:hover { border-color: var(--purple); color: var(--purple); }
+    .page-btn.active { background: var(--purple); color: white; border-color: var(--purple); }
+    .page-info { font-size: 13px; color: var(--muted); }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(10,5,20,0.6);
+      backdrop-filter: blur(8px); z-index: 9000;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal { background: white; border-radius: 20px; padding: 32px; max-width: 640px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; }
+    .modal h3 { font-size: 20px; font-weight: 800; margin-bottom: 20px; }
+    .modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; cursor: pointer; font-size: 18px; color: var(--muted); }
+    .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(106,13,173,0.06); font-size: 13.5px; }
+    .detail-row span:first-child { color: var(--muted); }
+    .detail-row span:last-child { font-weight: 600; }
+    .files-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+    .file-item {
+      border: 1px solid rgba(106,13,173,0.12); border-radius: 10px; padding: 12px;
+      text-align: center; cursor: pointer; transition: all 0.2s;
+    }
+    .file-item:hover { border-color: var(--purple); background: rgba(106,13,173,0.04); }
+    .file-item .icon { font-size: 28px; margin-bottom: 6px; }
+    .file-item .name { font-size: 11px; color: var(--muted); word-break: break-all; }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .toast-item {
+      background: #0A0515; color: white; padding: 12px 20px; border-radius: 10px;
+      font-size: 13px; font-weight: 600; animation: slideIn 0.3s ease;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 8px;
+      max-width: 320px;
+    }
+    .toast-item.success { border-left: 3px solid #1A9950; }
+    .toast-item.error   { border-left: 3px solid var(--red); }
+    .toast-item.info    { border-left: 3px solid var(--blue); }
+    @keyframes slideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+
+    /* ── LOADING ── */
+    .spinner { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-row td { text-align: center; padding: 40px; color: var(--muted); }
+
+    /* ── EMPTY ── */
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 1024px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .charts-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══════════════════════════════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">Rach<span>a</span>naa</div>
+    <div class="login-sub">Fintech Consultancy · Admin</div>
+    <h2>Sign In to Dashboard</h2>
+    <div id="login-error" class="login-error" style="display:none"></div>
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="login-username" placeholder="admin" autocomplete="username" />
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+  </div>
+</div>
+
+<!-- ══ APP ════════════════════════════════════════════════════════════════════ -->
+<div id="app">
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div class="name">Rach<span>a</span>naa</div>
+        <div class="sub">Admin Dashboard</div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">Main</div>
+        <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+          <span>📊</span> Dashboard
+        </div>
+        <div class="nav-section">Leads</div>
+        <div class="nav-item" onclick="showPage('all')" id="nav-all">
+          <span>📋</span> All Leads <span class="badge" id="badge-all">0</span>
+        </div>
+        <div class="nav-item" onclick="showPage('insurance')" id="nav-insurance">
+          <span>🛡️</span> Insurance
+        </div>
+        <div class="nav-item" onclick="showPage('motor')" id="nav-motor">
+          <span>🚗</span> Motor Insurance
+        </div>
+        <div class="nav-item" onclick="showPage('loan')" id="nav-loan">
+          <span>💳</span> Loans
+        </div>
+        <div class="nav-item" onclick="showPage('investment')" id="nav-investment">
+          <span>📈</span> Investments
+        </div>
+        <!-- <div class="nav-item" onclick="showPage('career')" id="nav-career">
+          <span>✈️</span> Aviation Careers
+        </div> -->
+        <div class="nav-item" onclick="showPage('general')" id="nav-general">
+          <span>✈️</span> Aviation Careers
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="logout-btn" onclick="doLogout()">
+          <span>🚪</span> Logout
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-title" id="page-title">Dashboard</div>
+        <div class="topbar-right">
+          <div class="live-badge">
+            <span class="live-dot"></span> Live Updates
+          </div>
+          <span style="font-size:13px;color:var(--muted)" id="admin-name">admin</span>
+        </div>
+      </header>
+
+      <div class="content">
+        <!-- Dashboard Page -->
+        <div id="page-dashboard">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="label">Total Leads</div>
+              <div class="value" id="stat-total" style="color:var(--purple)">—</div>
+              <div class="change" id="stat-today">Today: —</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Insurance</div>
+              <div class="value" id="stat-insurance" style="color:var(--purple)">—</div>
+              <div class="change">Motor included</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Loans</div>
+              <div class="value" id="stat-loan" style="color:var(--green)">—</div>
+              <div class="change">All loan types</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Investments</div>
+              <div class="value" id="stat-investment" style="color:var(--gold)">—</div>
+              <div class="change">MF, Demat, Bonds</div>
+            </div>
+          </div>
+
+          <div class="stats-grid" style="margin-bottom:24px">
+            <div class="stat-card">
+              <div class="label">Motor Leads</div>
+              <div class="value" id="stat-motor" style="color:var(--blue)">—</div>
+              <div class="change">With RC docs</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Career Leads</div>
+              <div class="value" id="stat-career" style="color:#2563eb">—</div>
+              <div class="change">Aviation placements</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">New (Uncontacted)</div>
+              <div class="value" id="stat-new" style="color:var(--red)">—</div>
+              <div class="change">Needs follow-up</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Converted</div>
+              <div class="value" id="stat-converted" style="color:var(--green)">—</div>
+              <div class="change">Successfully closed</div>
+            </div>
+          </div>
+
+          <div class="charts-grid">
+            <div class="chart-card">
+              <h3>Lead Trend</h3>
+              <div class="sub">Last 30 days — daily submissions</div>
+              <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <h3>By Category</h3>
+              <div class="sub">Distribution of lead types</div>
+              <div class="chart-wrap"><canvas id="chart-category"></canvas></div>
+            </div>
+          </div>
+
+          <div class="charts-grid">
+            <div class="chart-card">
+              <h3>Lead Status</h3>
+              <div class="sub">Current pipeline status</div>
+              <div class="chart-wrap"><canvas id="chart-status"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <h3>Weekly Comparison</h3>
+              <div class="sub">Last 7 days by category</div>
+              <div class="chart-wrap"><canvas id="chart-weekly"></canvas></div>
+            </div>
+          </div>
+
+          <!-- Recent Leads mini table -->
+          <div class="table-card" style="margin-top:24px">
+            <div class="table-header">
+              <h3>Recent Leads</h3>
+              <button class="btn btn-primary" onclick="showPage('all')">View All →</button>
+            </div>
+            <div style="overflow-x:auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name / Vehicle</th>
+                    <th>Mobile</th>
+                    <th>Service</th>
+                    <th>Category</th>
+                    <th>Status</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody id="recent-leads-body">
+                  <tr class="loading-row"><td colspan="6">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Leads List Page -->
+        <div id="page-leads" style="display:none">
+          <div class="table-card">
+            <div class="table-header">
+              <h3 id="leads-page-title">All Leads</h3>
+              <div class="filters">
+                <input class="filter-input" type="text" id="search-input" placeholder="🔍 Search name, mobile, service..." style="width:220px" oninput="debounceSearch()" />
+                <select class="filter-select" id="filter-status" onchange="loadLeads()">
+                  <option value="All">All Status</option>
+                  <option value="New">New</option>
+                  <option value="Contacted">Contacted</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Converted">Converted</option>
+                  <option value="Closed">Closed</option>
+                </select>
+                <input class="filter-input" type="date" id="filter-start" onchange="loadLeads()" title="From date" />
+                <input class="filter-input" type="date" id="filter-end" onchange="loadLeads()" title="To date" />
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-outline" onclick="exportCSV()" title="Export to CSV/Excel">
+                  📥 Export Excel
+                </button>
+                <button class="btn btn-outline" id="bulk-download-btn" onclick="bulkDownload()" style="display:none" title="Download selected files as ZIP">
+                  🗜️ Bulk Download Docs
+                </button>
+              </div>
+            </div>
+            <div style="overflow-x:auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th><input type="checkbox" id="select-all" onchange="toggleSelectAll()" /></th>
+                    <th>#</th>
+                    <th>Name / Vehicle No</th>
+                    <th>Mobile</th>
+                    <th>Service</th>
+                    <th>Category</th>
+                    <th>Status</th>
+                    <th>Documents</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="leads-tbody">
+                  <tr class="loading-row"><td colspan="10">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination" id="pagination"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div id="modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3 id="modal-title">Lead Details</h3>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════════════════════════
+const API_BASE = 'http://localhost:5000/api';
+let token = localStorage.getItem('rf_token') || '';
+let currentPage = 'dashboard';
+let currentCategory = 'All';
+let leadsPage = 1;
+let totalLeads = 0;
+let totalPages = 1;
+let selectedIds = new Set();
+let searchTimer = null;
+let charts = {};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════════════════════════════════
+async function doLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+
+  if (!username || !password) { errEl.textContent = 'Enter username and password'; errEl.style.display = 'block'; return; }
+
+  const btn = document.querySelector('.login-btn');
+  btn.innerHTML = '<span class="spinner"></span> Signing in...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Login failed');
+
+    token = data.token;
+    localStorage.setItem('rf_token', token);
+    localStorage.setItem('rf_user', data.username);
+
+    document.getElementById('admin-name').textContent = data.username;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    initApp();
+  } catch (err) {
+    errEl.textContent = err.message; errEl.style.display = 'block';
+  }
+  btn.innerHTML = 'Sign In'; btn.disabled = false;
+}
+
+function doLogout() {
+  localStorage.removeItem('rf_token');
+  localStorage.removeItem('rf_user');
+  token = '';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+document.getElementById('login-password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// Auto-login if token exists
+window.addEventListener('load', async () => {
+  if (token) {
+    try {
+      const res = await fetch(`${API_BASE}/auth/verify`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        document.getElementById('admin-name').textContent = localStorage.getItem('rf_user') || 'admin';
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        initApp();
+        return;
+      }
+    } catch {}
+    localStorage.removeItem('rf_token');
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SOCKET.IO
+// ══════════════════════════════════════════════════════════════════════════════
+function initSocket() {
+  const socket = io('http://localhost:5000');
+  socket.on('new_lead', (lead) => {
+    toast(`New lead: ${lead.name} — ${lead.service}`, 'success');
+    // Refresh stats silently
+    loadStats();
+    if (currentPage === 'dashboard') loadRecentLeads();
+    else loadLeads();
+  });
+  socket.on('lead_updated', () => {
+    if (currentPage !== 'dashboard') loadLeads();
+  });
+  socket.on('lead_deleted', () => {
+    if (currentPage !== 'dashboard') loadLeads();
+    loadStats();
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════════════════
+function initApp() {
+  initSocket();
+  loadStats();
+  loadRecentLeads();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════════════════════════════
+function showPage(page) {
+  currentPage = page;
+  leadsPage = 1;
+  selectedIds.clear();
+
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const navEl = document.getElementById(`nav-${page}`);
+  if (navEl) navEl.classList.add('active');
+
+  const titles = {
+    dashboard: 'Dashboard', all: 'All Leads', insurance: 'Insurance Leads',
+    motor: 'Motor Insurance Leads', loan: 'Loan Leads', investment: 'Investment Leads',
+    career: 'Career Leads', general: 'General Leads'
+  };
+  document.getElementById('page-title').textContent = titles[page] || 'Leads';
+  document.getElementById('leads-page-title').textContent = titles[page] || 'Leads';
+
+  document.getElementById('page-dashboard').style.display = page === 'dashboard' ? 'block' : 'none';
+  document.getElementById('page-leads').style.display = page !== 'dashboard' ? 'block' : 'none';
+
+  if (page !== 'dashboard') {
+    currentCategory = page === 'all' ? 'All' : capitalize(page);
+    loadLeads();
+  }
+}
+
+function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// STATS + CHARTS
+// ══════════════════════════════════════════════════════════════════════════════
+async function loadStats() {
+  try {
+    const res = await authFetch('/leads/stats');
+    const d = await res.json();
+    if (!d.success) return;
+
+    document.getElementById('stat-total').textContent     = d.total;
+    document.getElementById('stat-today').textContent     = `Today: ${d.todayCount}`;
+    document.getElementById('stat-insurance').textContent = (d.byCategory['Insurance'] || 0);
+    document.getElementById('stat-loan').textContent      = (d.byCategory['Loan'] || 0);
+    document.getElementById('stat-investment').textContent= (d.byCategory['Investment'] || 0);
+    document.getElementById('stat-motor').textContent     = (d.byCategory['Motor'] || 0);
+    document.getElementById('stat-career').textContent    = (d.byCategory['Career'] || 0);
+    document.getElementById('stat-new').textContent       = (d.byStatus['New'] || 0);
+    document.getElementById('stat-converted').textContent = (d.byStatus['Converted'] || 0);
+    document.getElementById('badge-all').textContent      = d.total;
+
+    drawCharts(d);
+  } catch (err) { console.error(err); }
+}
+
+function drawCharts(d) {
+  // Destroy old charts
+  Object.values(charts).forEach(c => c.destroy());
+  charts = {};
+
+  // Trend chart
+  const trendLabels = d.last30.map(x => {
+    const dt = new Date(x._id); return `${dt.getDate()}/${dt.getMonth()+1}`;
+  });
+  const trendData = d.last30.map(x => x.count);
+  charts.trend = new Chart(document.getElementById('chart-trend'), {
+    type: 'line',
+    data: {
+      labels: trendLabels,
+      datasets: [{
+        label: 'Leads',
+        data: trendData,
+        borderColor: '#6A0DAD',
+        backgroundColor: 'rgba(106,13,173,0.08)',
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: '#6A0DAD',
+        pointRadius: 3,
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+
+  // Category donut
+  const catLabels = Object.keys(d.byCategory);
+  const catData   = Object.values(d.byCategory);
+  const catColors = { Insurance:'#6A0DAD', Motor:'#4A90D9', Loan:'#1A6B3C', Investment:'#C8940A', Career:'#2563eb', General:'#888' };
+  charts.category = new Chart(document.getElementById('chart-category'), {
+    type: 'doughnut',
+    data: {
+      labels: catLabels,
+      datasets: [{ data: catData, backgroundColor: catLabels.map(l => catColors[l] || '#888'), borderWidth: 2, borderColor: 'white' }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+  });
+
+  // Status bar
+  const statuses = ['New','Contacted','In Progress','Converted','Closed'];
+  const statusColors = { New:'#DC2626', Contacted:'#4A90D9', 'In Progress':'#C8940A', Converted:'#1A6B3C', Closed:'#888' };
+  charts.status = new Chart(document.getElementById('chart-status'), {
+    type: 'bar',
+    data: {
+      labels: statuses,
+      datasets: [{
+        data: statuses.map(s => d.byStatus[s] || 0),
+        backgroundColor: statuses.map(s => statusColors[s]),
+        borderRadius: 6,
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+
+  // Weekly chart
+  const weekLabels = d.last7.map(x => {
+    const dt = new Date(x._id); return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()];
+  });
+  charts.weekly = new Chart(document.getElementById('chart-weekly'), {
+    type: 'bar',
+    data: {
+      labels: weekLabels,
+      datasets: [{
+        label: 'Leads',
+        data: d.last7.map(x => x.count),
+        backgroundColor: 'rgba(106,13,173,0.6)',
+        borderRadius: 6,
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// LEADS TABLE
+// ══════════════════════════════════════════════════════════════════════════════
+async function loadLeads() {
+  const tbody = document.getElementById('leads-tbody');
+  tbody.innerHTML = '<tr class="loading-row"><td colspan="10">Loading...</td></tr>';
+
+  const search = document.getElementById('search-input')?.value || '';
+  const status = document.getElementById('filter-status')?.value || 'All';
+  const start  = document.getElementById('filter-start')?.value || '';
+  const end    = document.getElementById('filter-end')?.value   || '';
+
+  const params = new URLSearchParams({
+    page: leadsPage, limit: 50,
+    ...(currentCategory !== 'All' && { category: currentCategory }),
+    ...(status !== 'All' && { status }),
+    ...(search && { search }),
+    ...(start && { startDate: start }),
+    ...(end   && { endDate: end })
+  });
+
+  try {
+    const res = await authFetch(`/leads?${params}`);
+    const d = await res.json();
+    if (!d.success) throw new Error('Failed');
+
+    totalLeads = d.total; totalPages = d.pages;
+    renderLeadsTable(d.leads);
+    renderPagination();
+    updateBulkBtn();
+  } catch (err) {
+    tbody.innerHTML = `<tr class="loading-row"><td colspan="10">Error loading leads. <button onclick="loadLeads()" class="btn btn-outline btn-sm">Retry</button></td></tr>`;
+  }
+}
+
+// function renderLeadsTable(leads) {
+//   const tbody = document.getElementById('leads-tbody');
+//   if (!leads.length) {
+//     tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="icon">📭</div><p>No leads found</p></div></td></tr>`;
+//     return;
+//   }
+
+//   tbody.innerHTML = leads.map((l, i) => {
+//     const isMotor = l.category === 'Motor';
+//     const hasFiles = l.rcFrontFile || l.rcBackFile || l.prevPolicyFile;
+//     const filesHtml = hasFiles ? `
+//       <div style="display:flex;gap:4px;flex-wrap:wrap">
+//         ${l.rcFrontFile ? `<button class="btn btn-outline btn-sm" onclick="downloadFile('rc-front','${l.rcFrontFile}')" title="Download RC Front">RC Front</button>` : ''}
+//         ${l.rcBackFile  ? `<button class="btn btn-outline btn-sm" onclick="downloadFile('rc-back','${l.rcBackFile}')"  title="Download RC Back">RC Back</button>`  : ''}
+//         ${l.prevPolicyFile ? `<button class="btn btn-outline btn-sm" onclick="downloadFile('prev-policy','${l.prevPolicyFile}')" title="Download Prev Policy">Policy</button>` : ''}
+//       </div>` : '<span style="color:var(--muted);font-size:12px">—</span>';
+
+//     const dateStr = new Date(l.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+//     const isSelected = selectedIds.has(l._id);
+
+//     return `<tr class="${isSelected ? 'selected' : ''}" id="row-${l._id}">
+//       <td><input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelect('${l._id}', this.checked)" /></td>
+//       <td style="color:var(--muted);font-size:12px">${(leadsPage - 1) * 50 + i + 1}</td>
+//       <td>
+//         <div style="font-weight:600">${escHtml(l.name)}</div>
+//         ${l.vehicleNumber ? `<div style="font-size:11px;color:var(--blue)">${l.vehicleNumber}</div>` : ''}
+//       </td>
+//       <td><a href="tel:+91${l.mobile}" style="color:var(--purple);text-decoration:none;font-weight:500">+91 ${l.mobile}</a></td>
+//       <td style="max-width:160px;font-size:13px">${escHtml(l.service)}</td>
+//       <td><span class="badge badge-${l.category}">${l.category}</span></td>
+//       <td>
+//         <select class="status-select" onchange="updateStatus('${l._id}', this.value)">
+//           ${['New','Contacted','In Progress','Converted','Closed'].map(s => `<option ${s === l.status ? 'selected' : ''}>${s}</option>`).join('')}
+//         </select>
+//       </td>
+//       <td>${filesHtml}</td>
+//       <td style="font-size:12px;color:var(--muted);white-space:nowrap">${dateStr}</td>
+//       <td>
+//         <div style="display:flex;gap:4px">
+//           <button class="btn btn-outline btn-sm" onclick="openDetail('${l._id}')" title="View Details">👁️</button>
+//           <button class="btn btn-sm" style="background:rgba(220,38,38,0.08);color:var(--red);border:1px solid rgba(220,38,38,0.2)" onclick="deleteLead('${l._id}')" title="Delete">🗑️</button>
+//         </div>
+//       </td>
+//     </tr>`;
+//   }).join('');
+// }
+
+function renderLeadsTable(leads) {
+  const tbody = document.getElementById('leads-tbody');
+  if (!leads.length) {
+    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state"><div class="icon">📭</div><p>No leads found</p></div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = leads.map((l, i) => {
+    const isMotor = l.category === 'Motor';
+    const hasFiles = l.rcFrontFile || l.rcBackFile || l.prevPolicyFile;
+    
+    // Get additional info based on category
+    let additionalInfo = '';
+    if (l.category === 'Loan' && l.loanAmount) {
+      additionalInfo = `<div style="font-size:11px;color:var(--green)">Amount: ${l.loanAmount}</div>`;
+    } else if (l.category === 'Investment' && l.monthlyInvestment) {
+      additionalInfo = `<div style="font-size:11px;color:var(--gold)">SIP: ${l.monthlyInvestment}</div>`;
+    } else if (l.category === 'Career' && l.qualification) {
+      additionalInfo = `<div style="font-size:11px;color:var(--blue)">${l.qualification}</div>`;
+    }
+
+    const filesHtml = hasFiles ? `
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${l.rcFrontFile ? `<button class="btn btn-outline btn-sm" onclick="downloadFile('rc-front','${l.rcFrontFile}')" title="Download RC Front">RC Front</button>` : ''}
+        ${l.rcBackFile  ? `<button class="btn btn-outline btn-sm" onclick="downloadFile('rc-back','${l.rcBackFile}')"  title="Download RC Back">RC Back</button>`  : ''}
+        ${l.prevPolicyFile ? `<button class="btn btn-outline btn-sm" onclick="downloadFile('prev-policy','${l.prevPolicyFile}')" title="Download Prev Policy">Policy</button>` : ''}
+      </div>` : '<span style="color:var(--muted);font-size:12px">—</span>';
+
+    const dateStr = new Date(l.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+    const isSelected = selectedIds.has(l._id);
+
+    return `<tr class="${isSelected ? 'selected' : ''}" id="row-${l._id}">
+      <td><input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelect('${l._id}', this.checked)" /></td>
+      <td style="color:var(--muted);font-size:12px">${(leadsPage - 1) * 50 + i + 1}</td>
+      <td>
+        <div style="font-weight:600">${escHtml(l.name)}</div>
+        ${l.city ? `<div style="font-size:11px;color:var(--muted)">${l.city}</div>` : ''}
+      </td>
+      <td><a href="tel:+91${l.mobile}" style="color:var(--purple);text-decoration:none;font-weight:500">+91 ${l.mobile}</a></td>
+      <td style="max-width:160px;font-size:13px">
+        ${escHtml(l.service)}
+        ${additionalInfo}
+      </td>
+      <td><span class="badge badge-${l.category}">${l.category}</span></td>
+      <td>
+        <select class="status-select" onchange="updateStatus('${l._id}', this.value)">
+          ${['New','Contacted','In Progress','Converted','Closed'].map(s => `<option ${s === l.status ? 'selected' : ''}>${s}</option>`).join('')}
+        </select>
+      </td>
+      <td>${filesHtml}</td>
+      <td style="font-size:12px;color:var(--muted);white-space:nowrap">${dateStr}</td>
+      <td>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-outline btn-sm" onclick="openDetail('${l._id}')" title="View Details">👁️</button>
+          <button class="btn btn-sm" style="background:rgba(220,38,38,0.08);color:var(--red);border:1px solid rgba(220,38,38,0.2)" onclick="deleteLead('${l._id}')" title="Delete">🗑️</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderPagination() {
+  const el = document.getElementById('pagination');
+  if (totalPages <= 1) { el.innerHTML = `<span class="page-info">${totalLeads} leads total</span>`; return; }
+
+  let html = `<span class="page-info">${totalLeads} leads · Page ${leadsPage}/${totalPages}</span>`;
+  html += `<button class="page-btn" onclick="changePage(${leadsPage - 1})" ${leadsPage === 1 ? 'disabled' : ''}>‹</button>`;
+
+  for (let p = Math.max(1, leadsPage - 2); p <= Math.min(totalPages, leadsPage + 2); p++) {
+    html += `<button class="page-btn ${p === leadsPage ? 'active' : ''}" onclick="changePage(${p})">${p}</button>`;
+  }
+  html += `<button class="page-btn" onclick="changePage(${leadsPage + 1})" ${leadsPage === totalPages ? 'disabled' : ''}>›</button>`;
+  el.innerHTML = html;
+}
+
+function changePage(p) {
+  if (p < 1 || p > totalPages) return;
+  leadsPage = p;
+  loadLeads();
+}
+
+function debounceSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { leadsPage = 1; loadLeads(); }, 400);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SELECTION
+// ══════════════════════════════════════════════════════════════════════════════
+function toggleSelectAll() {
+  const all = document.getElementById('select-all').checked;
+  document.querySelectorAll('#leads-tbody input[type="checkbox"]').forEach(cb => {
+    const id = cb.getAttribute('onchange')?.match(/'([a-f0-9]+)'/)?.[1];
+    if (id) { cb.checked = all; all ? selectedIds.add(id) : selectedIds.delete(id); }
+    const row = cb.closest('tr');
+    if (row) row.classList.toggle('selected', all);
+  });
+  updateBulkBtn();
+}
+
+function toggleSelect(id, checked) {
+  checked ? selectedIds.add(id) : selectedIds.delete(id);
+  const row = document.getElementById(`row-${id}`);
+  if (row) row.classList.toggle('selected', checked);
+  updateBulkBtn();
+}
+
+function updateBulkBtn() {
+  const btn = document.getElementById('bulk-download-btn');
+  if (btn) btn.style.display = selectedIds.size > 0 ? 'inline-flex' : 'none';
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ACTIONS
+// ══════════════════════════════════════════════════════════════════════════════
+async function updateStatus(id, status) {
+  try {
+    await authFetch(`/leads/${id}`, 'PATCH', { status });
+    toast('Status updated', 'success');
+    loadStats();
+  } catch { toast('Failed to update', 'error'); }
+}
+
+async function deleteLead(id) {
+  if (!confirm('Delete this lead? This cannot be undone.')) return;
+  try {
+    await authFetch(`/leads/${id}`, 'DELETE');
+    toast('Lead deleted', 'info');
+    loadLeads();
+    loadStats();
+  } catch { toast('Failed to delete', 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DETAIL MODAL
+// ══════════════════════════════════════════════════════════════════════════════
+async function openDetail(id) {
+  document.getElementById('modal').style.display = 'flex';
+  document.getElementById('modal-body').innerHTML = '<div style="text-align:center;padding:40px">Loading...</div>';
+
+  try {
+    const res  = await authFetch(`/leads?page=1&limit=200`);
+    const data = await res.json();
+    const lead = data.leads.find(l => l._id === id);
+    if (!lead) throw new Error('Not found');
+    renderModal(lead);
+  } catch { document.getElementById('modal-body').innerHTML = '<p>Failed to load details.</p>'; }
+}
+
+// function renderModal(l) {
+//   document.getElementById('modal-title').textContent = `Lead: ${l.name}`;
+//   const isMotor = l.category === 'Motor';
+
+//   const rows = [
+//     ['ID', l._id],
+//     ['Name / Vehicle', l.name],
+//     ['Mobile', `<a href="tel:+91${l.mobile}" style="color:var(--purple)">+91 ${l.mobile}</a>`],
+//     ['Service', l.service],
+//     ['Category', `<span class="badge badge-${l.category}">${l.category}</span>`],
+//     ['Status', `<select class="status-select" onchange="updateStatus('${l._id}',this.value)">${['New','Contacted','In Progress','Converted','Closed'].map(s=>`<option ${s===l.status?'selected':''}>${s}</option>`).join('')}</select>`],
+//     ...(isMotor ? [['Vehicle Type', l.vehicleType || '—'], ['Vehicle Number', l.vehicleNumber || '—']] : []),
+//     ['Date', new Date(l.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })],
+//   ];
+
+//   let filesHtml = '';
+//   if (l.rcFrontFile || l.rcBackFile || l.prevPolicyFile) {
+//     const files = [
+//       { name: 'RC Front', folder: 'rc-front', file: l.rcFrontFile },
+//       { name: 'RC Back',  folder: 'rc-back',  file: l.rcBackFile },
+//       { name: 'Previous Policy', folder: 'prev-policy', file: l.prevPolicyFile }
+//     ].filter(f => f.file);
+
+//     filesHtml = `
+//       <div style="margin-top:20px">
+//         <div style="font-weight:700;margin-bottom:10px;font-size:14px">📎 Uploaded Documents</div>
+//         <div class="files-grid">
+//           ${files.map(f => `
+//             <div class="file-item" onclick="downloadFile('${f.folder}','${f.file}')">
+//               <div class="icon">${f.file.endsWith('.pdf') ? '📄' : '🖼️'}</div>
+//               <div style="font-size:13px;font-weight:600;margin-bottom:4px">${f.name}</div>
+//               <div class="name">${f.file}</div>
+//               <div style="margin-top:8px"><button class="btn btn-primary btn-sm">⬇️ Download</button></div>
+//             </div>`).join('')}
+//         </div>
+//       </div>`;
+//   }
+
+//   let notesHtml = `
+//     <div style="margin-top:20px">
+//       <div style="font-weight:700;margin-bottom:8px;font-size:14px">📝 Notes</div>
+//       <textarea id="modal-notes" style="width:100%;padding:10px;border:1.5px solid rgba(106,13,173,0.15);border-radius:8px;font-family:inherit;font-size:13px;resize:vertical;min-height:80px" placeholder="Add notes...">${escHtml(l.notes || '')}</textarea>
+//       <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="saveNotes('${l._id}')">Save Notes</button>
+//     </div>`;
+
+//   document.getElementById('modal-body').innerHTML = `
+//     ${rows.map(([k,v]) => `<div class="detail-row"><span>${k}</span><span>${v}</span></div>`).join('')}
+//     ${filesHtml}
+//     ${notesHtml}`;
+// }
+
+function renderModal(l) {
+  document.getElementById('modal-title').textContent = `Lead: ${l.name}`;
+  
+  // Build rows based on category
+  let rows = [
+    ['ID', l._id],
+    ['Name', l.name],
+    ['Mobile', `<a href="tel:+91${l.mobile}" style="color:var(--purple)">+91 ${l.mobile}</a>`],
+    ['Service', l.service],
+    ['Category', `<span class="badge badge-${l.category}">${l.category}</span>`],
+  ];
+  
+  // Add city if exists
+  if (l.city) rows.push(['City', l.city]);
+  
+  // Add category-specific fields
+  if (l.category === 'Insurance') {
+    if (l.insuranceType) rows.push(['Insurance Type', l.insuranceType]);
+  } else if (l.category === 'Loan') {
+    if (l.loanType) rows.push(['Loan Type', l.loanType]);
+    if (l.loanAmount) rows.push(['Loan Amount', l.loanAmount]);
+  } else if (l.category === 'Investment') {
+    if (l.investmentType) rows.push(['Investment Type', l.investmentType]);
+    if (l.monthlyInvestment) rows.push(['Monthly Investment', l.monthlyInvestment]);
+    if (l.investmentGoals) rows.push(['Investment Goals', l.investmentGoals]);
+  } else if (l.category === 'Career') {
+    if (l.jobCategory) rows.push(['Job Category', l.jobCategory]);
+    if (l.qualification) rows.push(['Qualification', l.qualification]);
+  } else if (l.category === 'Motor') {
+    if (l.vehicleType) rows.push(['Vehicle Type', l.vehicleType]);
+    if (l.vehicleNumber) rows.push(['Vehicle Number', l.vehicleNumber]);
+  }
+  
+  // Add message/notes
+  if (l.message) rows.push(['Message', l.message]);
+  
+  // Add status and date
+  rows.push(
+    ['Status', `<select class="status-select" onchange="updateStatus('${l._id}',this.value)">${['New','Contacted','In Progress','Converted','Closed'].map(s=>`<option ${s===l.status?'selected':''}>${s}</option>`).join('')}</select>`],
+    ['Date', new Date(l.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })]
+  );
+
+  // Files HTML (for motor leads)
+  let filesHtml = '';
+  if (l.rcFrontFile || l.rcBackFile || l.prevPolicyFile) {
+    const files = [
+      { name: 'RC Front', folder: 'rc-front', file: l.rcFrontFile },
+      { name: 'RC Back',  folder: 'rc-back',  file: l.rcBackFile },
+      { name: 'Previous Policy', folder: 'prev-policy', file: l.prevPolicyFile }
+    ].filter(f => f.file);
+
+    filesHtml = `
+      <div style="margin-top:20px">
+        <div style="font-weight:700;margin-bottom:10px;font-size:14px">📎 Uploaded Documents</div>
+        <div class="files-grid">
+          ${files.map(f => `
+            <div class="file-item" onclick="downloadFile('${f.folder}','${f.file}')">
+              <div class="icon">${f.file.endsWith('.pdf') ? '📄' : '🖼️'}</div>
+              <div style="font-size:13px;font-weight:600;margin-bottom:4px">${f.name}</div>
+              <div class="name">${f.file}</div>
+              <div style="margin-top:8px"><button class="btn btn-primary btn-sm">⬇️ Download</button></div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  }
+
+  let notesHtml = `
+    <div style="margin-top:20px">
+      <div style="font-weight:700;margin-bottom:8px;font-size:14px">📝 Notes</div>
+      <textarea id="modal-notes" style="width:100%;padding:10px;border:1.5px solid rgba(106,13,173,0.15);border-radius:8px;font-family:inherit;font-size:13px;resize:vertical;min-height:80px" placeholder="Add notes...">${escHtml(l.notes || '')}</textarea>
+      <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="saveNotes('${l._id}')">Save Notes</button>
+    </div>`;
+
+  document.getElementById('modal-body').innerHTML = `
+    ${rows.map(([k,v]) => `<div class="detail-row"><span>${k}</span><span>${v}</span></div>`).join('')}
+    ${filesHtml}
+    ${notesHtml}`;
+}
+
+async function saveNotes(id) {
+  const notes = document.getElementById('modal-notes').value;
+  try {
+    await authFetch(`/leads/${id}`, 'PATCH', { notes });
+    toast('Notes saved', 'success');
+  } catch { toast('Failed to save notes', 'error'); }
+}
+
+function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// RECENT LEADS (dashboard)
+// ══════════════════════════════════════════════════════════════════════════════
+async function loadRecentLeads() {
+  try {
+    const res = await authFetch('/leads?page=1&limit=10');
+    const d = await res.json();
+    const tbody = document.getElementById('recent-leads-body');
+    if (!d.success || !d.leads.length) { tbody.innerHTML = '<tr class="loading-row"><td colspan="6">No leads yet</td></tr>'; return; }
+
+    tbody.innerHTML = d.leads.map(l => `
+      <tr>
+        <td><b>${escHtml(l.name)}</b></td>
+        <td>+91 ${l.mobile}</td>
+        <td style="font-size:12px">${escHtml(l.service)}</td>
+        <td><span class="badge badge-${l.category}">${l.category}</span></td>
+        <td><span style="font-size:12px;color:var(--muted)">${l.status}</span></td>
+        <td style="font-size:12px;color:var(--muted)">${timeAgo(l.createdAt)}</td>
+      </tr>`).join('');
+  } catch {}
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FILE DOWNLOADS
+// ══════════════════════════════════════════════════════════════════════════════
+function downloadFile(folder, filename) {
+  const url = `${API_BASE}/leads/files/download/${folder}/${filename}?token=${token}`;
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  // Use fetch to include auth header
+  fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    .then(r => r.blob())
+    .then(blob => {
+      const blobUrl = URL.createObjectURL(blob);
+      a.href = blobUrl; a.click(); URL.revokeObjectURL(blobUrl);
+    }).catch(() => toast('Download failed', 'error'));
+}
+
+async function bulkDownload() {
+  if (!selectedIds.size) return;
+  const ids = Array.from(selectedIds);
+  toast(`Preparing ZIP for ${ids.length} lead(s)...`, 'info');
+
+  try {
+    const res = await fetch(`${API_BASE}/leads/files/bulk-download`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ leadIds: ids })
+    });
+    if (!res.ok) throw new Error('Failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `rachanaa_docs_${Date.now()}.zip`; a.click();
+    URL.revokeObjectURL(url);
+    toast('ZIP downloaded!', 'success');
+  } catch { toast('Bulk download failed', 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// EXPORT CSV
+// ══════════════════════════════════════════════════════════════════════════════
+async function exportCSV() {
+  const category = currentCategory !== 'All' ? `&category=${currentCategory}` : '';
+  const status   = document.getElementById('filter-status')?.value;
+  const start    = document.getElementById('filter-start')?.value;
+  const end      = document.getElementById('filter-end')?.value;
+  const qs = `${category}${status && status !== 'All' ? `&status=${status}` : ''}${start ? `&startDate=${start}` : ''}${end ? `&endDate=${end}` : ''}`;
+
+  const res = await fetch(`${API_BASE}/leads/export/csv?${qs}`, { headers: { Authorization: `Bearer ${token}` } });
+  const blob = await res.blob();
+  const url  = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `rachanaa_leads_${Date.now()}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  toast('Excel/CSV exported!', 'success');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════════════════════════
+async function authFetch(path, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+    ...(body ? { body: JSON.stringify(body) } : {})
+  };
+  return fetch(`${API_BASE}${path}`, opts);
+}
+
+function escHtml(s = '') { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  return `${Math.floor(hr / 24)}d ago`;
+}
+
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast-item ${type}`;
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  el.innerHTML = `${icons[type] || 'ℹ️'} ${msg}`;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+</script>
+</body>
+</html>
