@@ -107,7 +107,7 @@ const io = new Server(server, {
   cors: {
     origin: process.env.NODE_ENV === 'production'
       ? process.env.FRONTEND_URL
-      : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5500', 'http://127.0.0.1:5501', 'null'],
+      : ['https://rachanaa-admin.vercel.app/','https://rachanaa-frontend.vercel.app/'],
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     credentials: true
   }
@@ -119,7 +119,7 @@ app.use((req, res, next) => { req.io = io; next(); });
 // ─── Middleware ───────────────────────────────────────────────────────────────
 // Updated CORS to handle file uploads
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5500', 'http://127.0.0.1:5501', 'null'],
+  origin: ['https://rachanaa-admin.vercel.app/','https://rachanaa-frontend.vercel.app/'],
   credentials: true
 }));
 app.use(express.json());
