@@ -105,9 +105,7 @@ console.log("Mongo URI:", process.env.MONGODB_URI);
 
 const io = new Server(server, {
   cors: {
-    origin: process.env.NODE_ENV === 'production'
-      ? process.env.FRONTEND_URL
-      : ['https://rachanaa-admin.vercel.app/','https://rachanaa-frontend.vercel.app/'],
+    origin:  ['https://rachanaa-admin.vercel.app','https://rachanaa-frontend.vercel.app'],
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     credentials: true
   }
@@ -119,7 +117,7 @@ app.use((req, res, next) => { req.io = io; next(); });
 // ─── Middleware ───────────────────────────────────────────────────────────────
 // Updated CORS to handle file uploads
 app.use(cors({
-  origin: ['https://rachanaa-admin.vercel.app/','https://rachanaa-frontend.vercel.app/'],
+  origin: ['https://rachanaa-admin.vercel.app','https://rachanaa-frontend.vercel.app'],
   credentials: true
 }));
 app.use(express.json());
