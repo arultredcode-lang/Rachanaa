@@ -5107,9 +5107,10 @@
         const all = [...items, ...items];
         el.innerHTML = all
           .map(
+            // <img src="${p.img}" alt="${p.name}" style="height:35px;width:auto;object-fit:contain;mix-blend-mode:multiply;filter:grayscale(100%) opacity(80%);transition:all 0.3s ease;" onmouseover="this.style.filter='grayscale(0%) opacity(100%)'" onmouseout="this.style.filter='grayscale(100%) opacity(80%)'">
             (p) => `
     <div class="partner-pill" style="padding:10px 24px;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;min-width:140px;box-shadow:0 4px 12px rgba(0,0,0,0.03);">
-      <img src="${p.img}" alt="${p.name}" style="height:35px;width:auto;object-fit:contain;mix-blend-mode:multiply;filter:grayscale(100%) opacity(80%);transition:all 0.3s ease;" onmouseover="this.style.filter='grayscale(0%) opacity(100%)'" onmouseout="this.style.filter='grayscale(100%) opacity(80%)'">
+      <img src="${p.img}" alt="${p.name}" style="height:35px;width:auto;object-fit:contain;mix-blend-mode:multiply;">
     </div>
   `,
           )
